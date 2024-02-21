@@ -6,8 +6,9 @@ from typing import List
 from datetime import datetime, timedelta
 from models import Contact
 import crud
+from db import Base, SessionLocal
 
-DATABASE_URL = "sqlite:///./test.db"
+DATABASE_URL = "postgresql://lomakin:QwertY_12345@localhost/test12"
 
 Base = declarative_base()
 
@@ -21,10 +22,6 @@ class Contact(Base):
     email = Column(String)
     birthday = Column(Date)
 
-
-engine = create_engine(DATABASE_URL)
-Base.metadata.create_all(bind=engine)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 app = FastAPI()
 
@@ -133,4 +130,4 @@ def get_upcoming_birthdays(db: Session = Depends(get_db)):
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="127.0.0.1", port=8000, reload=True)
+    uvicorn.main(app, host="127.0.0.1", port=8000, reload=True)
