@@ -1,24 +1,31 @@
+from ast import Dict
+import fastapi
 from collections import UserDict, UserList
-import statistics
-from fastapi import FastAPI, Depends, HTTPException, Query
-from pydantic import BaseModel
-from sqlalchemy import create_engine, Column, Integer, String, Date
-from sqlalchemy.orm import declarative_base, Session, sessionmaker
-from typing import List
-from datetime import datetime, timedelta
-from api.api import get_db
-import db
-from models import Contact
-import crud
-from db import Base, SessionLocal
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-import jwt
+from http import HTTPStatus
 from jwt import PyJWTError
+from mysqlx import Column
+from psycopg2 import Date
+import statistics
+from sqlalchemy import Integer, String
+from fastapi import FastAPI, Depends, HTTPException
+from sqlalchemy.orm import Session
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from fastapi import Depends
-from schemas import ContactValidator
+from pydantic import BaseModel
+from typing import List
+from datetime import datetime, timedelta
+from api.api import get_db
+
+# Add the missing import statement
+from fastapi.security import OAuth2PasswordRequestForm
+
+import db
+from models import Contact
+from db import Base, SessionLocal
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import create_engine, Column, Integer, String, Date
+from sqlalchemy.orm import declarative_base, Session, sessionmaker
 
 DATABASE_URL = "postgresql://lomakin:QwertY_12345@localhost/test12"
 
@@ -48,6 +55,12 @@ class Contact(Base):
 app = FastAPI()
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+
+class ContactValidator(BaseModel):
+    name: str
+    phone: str
+    email: str
 
 
 # Функция для создания JWT токена
@@ -147,7 +160,7 @@ def create_jwt_token(data: dict) -> str:
     return jwt.encode(data, SECRET_KEY, algorithm=ALGORITHM)
 
 
-def verify_token(token: str = Depends(oauth2_scheme)) -> User:
+def verify_token(token: str = Depends(oauth2_scheme)) -> Dict[str, str]:
     credentials_exception = HTTPException(
         status_code=statistics.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -170,8 +183,22 @@ def create_contact(
     db: Session = Depends(get_db),
     token_data: dict = Depends(verify_token),
 ):
+    existing_contact = db.query(Contact).filter(Contact.email == contact.email).first()
+    if existing_contact:
+        # Если пользователь с таким email уже существует, возвращаем ошибку 409
+        raise HTTPException(
+            status_code=HTTPStatus.HTTP_409_CONFLICT,
+            detail="User with this email already exists",
+        )
 
-    if __name__ == "__main__":
-        import uvicorn
+    new_contact = Contact(**contact.dict())
+    db.add(new_contact)
+    db.commit()
+    db.refresh(new_contact)
+    return new_contact
+
+
+if __name__ == "__main__":
+    import uvicorn
 
     uvicorn.main(app, host="127.0.0.1", port=8000, reload=True)
