@@ -1,10 +1,12 @@
 from collections import UserDict, UserList
+import statistics
 from fastapi import FastAPI, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import create_engine, Column, Integer, String, Date
 from sqlalchemy.orm import declarative_base, Session, sessionmaker
 from typing import List
 from datetime import datetime, timedelta
+from api.api import get_db
 import db
 from models import Contact
 import crud
@@ -16,6 +18,7 @@ from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from fastapi import Depends
+from schemas import ContactValidator
 
 DATABASE_URL = "postgresql://lomakin:QwertY_12345@localhost/test12"
 
@@ -23,6 +26,12 @@ Base = declarative_base()
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+SECRET_KEY = "your-secret-key"
+ALGORITHM = "HS256"
+
+# Создайте экземпляр класса `OAuth2PasswordBearer` для обработки токенов
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
 class Contact(Base):
@@ -128,7 +137,41 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
     return db_user
 
 
-if __name__ == "__main__":
-    import uvicorn
+# Создайте класс для хранения данных пользователя
+class User(BaseModel):
+    username: str
+
+
+# Создайте функцию для создания JWT токена:
+def create_jwt_token(data: dict) -> str:
+    return jwt.encode(data, SECRET_KEY, algorithm=ALGORITHM)
+
+
+def verify_token(token: str = Depends(oauth2_scheme)) -> User:
+    credentials_exception = HTTPException(
+        status_code=statistics.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            raise credentials_exception
+        token_data = {"sub": username}
+    except JWTError:
+        raise credentials_exception
+    return token_data
+
+
+@app.post("/contacts/", response_model=ContactValidator)
+def create_contact(
+    contact: ContactValidator,
+    db: Session = Depends(get_db),
+    token_data: dict = Depends(verify_token),
+):
+
+    if __name__ == "__main__":
+        import uvicorn
 
     uvicorn.main(app, host="127.0.0.1", port=8000, reload=True)
