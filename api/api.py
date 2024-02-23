@@ -1,12 +1,13 @@
-from msilib import schema
 from fastapi import FastAPI, HTTPException, Depends
 from sqlalchemy.orm import Session
 from pydantic import schema_json_of, schema_of
 from typing import List
 from crud import crud
 from db import SessionLocal
-from schemas.schemas import ContactCreate  # Используйте импорт из crud
+from models import contact
 from models.contact import Contact
+from schemas import schema
+from schemas.schemas import ContactCreate
 
 app = FastAPI()
 
@@ -21,7 +22,7 @@ def get_db():
 
 @app.post("/contacts/", response_model=schema.MainContact)
 def create_contact(contact_data: ContactCreate, db: Session = Depends(get_db)):
-    return crud.create_contact(db, contact_data)
+    return crud.create_contact(db, contact)
 
 
 @app.get("/contacts/", response_model=List[schema_json_of.MainContact])

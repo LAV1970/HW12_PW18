@@ -1,2 +1,2 @@
 from .contact import Contact
-from models.database import Base
+from database import Base
