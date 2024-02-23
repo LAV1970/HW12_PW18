@@ -1,6 +1,6 @@
 import datetime
 from sqlalchemy.orm import Session
-from models import Contact
+from models.contact import Contact
 
 
 def create_contact(db: Session, contact_data: dict):

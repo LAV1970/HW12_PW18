@@ -19,7 +19,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from fastapi.security import OAuth2PasswordRequestForm
 from api.api import get_db
 import db
-from models import Contact
+from models.contact import Contact
 from db import Base, SessionLocal
 from sqlalchemy import create_engine
 from api.api import some_function
