@@ -1,37 +1,35 @@
 from ast import Dict
-import fastapi
-from collections import UserDict, UserList
+from api.api import app, get_db
 from http import HTTPStatus
-from jwt import PyJWTError
-from mysqlx import Column
-from psycopg2 import Date
 import statistics
-from sqlalchemy import Integer, String
-from fastapi import FastAPI, Depends, HTTPException
-from sqlalchemy.orm import Session
-from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError, jwt
-from passlib.context import CryptContext
-from pydantic import BaseModel
 from typing import List
+from fastapi import FastAPI, Depends, HTTPException
+from fastapi.security import OAuth2PasswordBearer
+from jose import JWTError
+import jwt
+from pydantic import BaseModel
+from sqlalchemy import Column, Integer, String, Date
+from sqlalchemy.orm import Session
+from passlib.context import CryptContext
 from datetime import datetime, timedelta
-from api.api import get_db
+from collections import UserDict, UserList  # Импортируем UserDict и UserList
+from sqlalchemy.ext.declarative import declarative_base
 
 # Add the missing import statement
 from fastapi.security import OAuth2PasswordRequestForm
-
+from api.api import get_db
 import db
 from models import Contact
 from db import Base, SessionLocal
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import create_engine, Column, Integer, String, Date
-from sqlalchemy.orm import declarative_base, Session, sessionmaker
+from sqlalchemy import create_engine
+from api.api import some_function
+
+some_function()
 
 DATABASE_URL = "postgresql://lomakin:QwertY_12345@localhost/test12"
 
 Base = declarative_base()
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 SECRET_KEY = "your-secret-key"
@@ -54,8 +52,6 @@ class Contact(Base):
 
 app = FastAPI()
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
-
 
 class ContactValidator(BaseModel):
     name: str
@@ -73,7 +69,7 @@ def decode_jwt_token(token: str) -> dict:
     try:
         payload = jwt.decode(token, "your-secret-key", algorithms=["HS256"])
         return payload
-    except PyJWTError:
+    except jwt.PyJWTError:
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
 
@@ -93,16 +89,12 @@ async def read_users_me(current_user: Contact = Depends(get_current_user)):
     return current_user
 
 
-def create_jwt_token(data: dict) -> str:
-    return jwt.encode(data, "your-secret-key", algorithm="HS256")
-
-
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
 
 
 def get_user(db: Session, username: str):
-    return db.query(UserDict).filter(UserList.username == username).first()
+    return db.query(User).filter(UserList.username == username).first()
 
 
 def verify_user(db: Session, username: str, password: str):
@@ -155,11 +147,6 @@ class User(BaseModel):
     username: str
 
 
-# Создайте функцию для создания JWT токена:
-def create_jwt_token(data: dict) -> str:
-    return jwt.encode(data, SECRET_KEY, algorithm=ALGORITHM)
-
-
 def verify_token(token: str = Depends(oauth2_scheme)) -> Dict[str, str]:
     credentials_exception = HTTPException(
         status_code=statistics.HTTP_401_UNAUTHORIZED,
@@ -180,9 +167,10 @@ def verify_token(token: str = Depends(oauth2_scheme)) -> Dict[str, str]:
 @app.post("/contacts/", response_model=ContactValidator)
 def create_contact(
     contact: ContactValidator,
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db),  # Используйте функцию get_db
     token_data: dict = Depends(verify_token),
 ):
+
     existing_contact = db.query(Contact).filter(Contact.email == contact.email).first()
     if existing_contact:
         # Если пользователь с таким email уже существует, возвращаем ошибку 409
