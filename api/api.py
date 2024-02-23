@@ -4,7 +4,7 @@ from fastapi import FastAPI, HTTPException, Depends
 from mysqlx import Schema
 from pydantic import schema_json_of, schema_of
 from sqlalchemy.orm import Session
-from .main import Contact, SessionLocal, engine
+from main import Contact, SessionLocal, engine
 from . import crud  # Import the crud module
 
 app = FastAPI()
