@@ -6,6 +6,7 @@ from typing import List
 from crud import crud
 from db import SessionLocal
 from schemas.schemas import ContactCreate  # Используйте импорт из crud
+from models.contact import Contact
 
 app = FastAPI()
 
