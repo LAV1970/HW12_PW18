@@ -1,30 +1,22 @@
 from ast import Dict
-from api.api import app, get_db
 from http import HTTPStatus
 import statistics
 from typing import List
 from fastapi import FastAPI, Depends, HTTPException
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from flask import app
 from jose import JWTError
 import jwt
 from pydantic import BaseModel
+from passlib.context import CryptContext
 from sqlalchemy import Column, Integer, String, Date
 from sqlalchemy.orm import Session
-from passlib.context import CryptContext
-from datetime import datetime, timedelta
-from collections import UserDict, UserList  # Импортируем UserDict и UserList
 from sqlalchemy.ext.declarative import declarative_base
 
-# Add the missing import statement
-from fastapi.security import OAuth2PasswordRequestForm
-from api.api import get_db
+from api.api import Contact, get_db
 import db
-from models.contact import Contact
-from db import Base, SessionLocal
-from sqlalchemy import create_engine
-from api.api import some_function
-
-some_function()
+from models.contact import ContactValidator
+from db import SessionLocal
 
 DATABASE_URL = "postgresql://lomakin:QwertY_12345@localhost/test12"
 
@@ -35,39 +27,18 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 SECRET_KEY = "your-secret-key"
 ALGORITHM = "HS256"
 
-# Создайте экземпляр класса `OAuth2PasswordBearer` для обработки токенов
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
-
-
-class Contact(Base):
-
-    __tablename__ = "contacts"
-
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, index=True)
-    phone = Column(String)
-    email = Column(String)
-    birthday = Column(Date)
-
-
-app = FastAPI()
-
-
-class ContactValidator(BaseModel):
-    name: str
-    phone: str
-    email: str
 
 
 # Функция для создания JWT токена
 def create_jwt_token(data: dict) -> str:
-    return jwt.encode(data, "your-secret-key", algorithm="HS256")
+    return jwt.encode(data, SECRET_KEY, algorithm=ALGORITHM)
 
 
 # Функция для проверки и декодирования JWT токена
 def decode_jwt_token(token: str) -> dict:
     try:
-        payload = jwt.decode(token, "your-secret-key", algorithms=["HS256"])
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         return payload
     except jwt.PyJWTError:
         raise HTTPException(status_code=401, detail="Invalid credentials")
@@ -84,8 +55,8 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
 
 
 # Ручка для получения текущего пользователя (аутентификация)
-@app.get("/users/me", response_model=Contact)
-async def read_users_me(current_user: Contact = Depends(get_current_user)):
+@app.get("/users/me", response_model=ContactValidator)
+async def read_users_me(current_user: ContactValidator = Depends(get_current_user)):
     return current_user
 
 
@@ -94,7 +65,7 @@ def verify_password(plain_password, hashed_password):
 
 
 def get_user(db: Session, username: str):
-    return db.query(User).filter(UserList.username == username).first()
+    return db.query(User).filter(User.username == username).first()
 
 
 def verify_user(db: Session, username: str, password: str):
@@ -120,26 +91,6 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
         access_token = create_jwt_token(access_token_data)
         return {"access_token": access_token, "token_type": "bearer"}
     raise HTTPException(status_code=401, detail="Incorrect username or password")
-
-
-def get_current_user(token: str = Depends(oauth2_scheme)):
-    credentials_exception = HTTPException(
-        status_code=401,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    try:
-        payload = jwt.decode(token, "your-secret-key", algorithms=["HS256"])
-        username: str = payload.get("sub")
-        if username is None:
-            raise credentials_exception
-    except JWTError:
-        raise credentials_exception
-
-    db_user = get_user(db, username)
-    if db_user is None:
-        raise credentials_exception
-    return db_user
 
 
 # Создайте класс для хранения данных пользователя
@@ -189,4 +140,4 @@ def create_contact(
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.main(app, host="127.0.0.1", port=8000, reload=True)
+    uvicorn.run(app, host="127.0.0.1", port=8000, reload=True)
