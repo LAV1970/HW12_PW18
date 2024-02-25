@@ -1,4 +1,14 @@
 from ast import Dict
+from api.api import (
+    create_contact,
+    read_contacts,
+    read_contact,
+    get_db,
+    ContactValidator,
+)
+from models.contact import Contact, ContactValidator
+import db
+from db import SessionLocal
 from http import HTTPStatus
 import statistics
 from typing import List
@@ -13,10 +23,6 @@ from sqlalchemy import Column, Integer, String, Date
 from sqlalchemy.orm import Session
 from sqlalchemy.ext.declarative import declarative_base
 
-from api.api import Contact, get_db
-import db
-from models.contact import ContactValidator
-from db import SessionLocal
 
 DATABASE_URL = "postgresql://lomakin:QwertY_12345@localhost/test12"
 
@@ -140,4 +146,4 @@ def create_contact(
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="127.0.0.1", port=8000, reload=True)
+    uvicorn.run(app, host="127.0.0.1", port=8001, reload=True)
