@@ -1,20 +1,10 @@
 from ast import Dict
-from api.api import (
-    create_contact,
-    read_contacts,
-    read_contact,
-    get_db,
-    ContactValidator,
-)
-from models.contact import Contact, ContactValidator
-import db
-from db import SessionLocal
 from http import HTTPStatus
 import statistics
-from typing import List
-from fastapi import FastAPI, Depends, HTTPException
+from typing import List, Dict
+from django import apps
+from fastapi import FastAPI, Depends, HTTPException, applications
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from flask import app
 from jose import JWTError
 import jwt
 from pydantic import BaseModel
@@ -22,7 +12,14 @@ from passlib.context import CryptContext
 from sqlalchemy import Column, Integer, String, Date
 from sqlalchemy.orm import Session
 from sqlalchemy.ext.declarative import declarative_base
+from api.api import Contact, create_contact, get_db
+import db
+from db import SessionLocal
+from models.contact import Contact
+from datetime import datetime
+from fastapi import FastAPI
 
+app = FastAPI()
 
 DATABASE_URL = "postgresql://lomakin:QwertY_12345@localhost/test12"
 
@@ -61,8 +58,8 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
 
 
 # Ручка для получения текущего пользователя (аутентификация)
-@app.get("/users/me", response_model=ContactValidator)
-async def read_users_me(current_user: ContactValidator = Depends(get_current_user)):
+@app.get("/users/me", response_model=Contact)
+async def read_users_me(current_user: Contact = Depends(get_current_user)):
     return current_user
 
 
@@ -121,9 +118,9 @@ def verify_token(token: str = Depends(oauth2_scheme)) -> Dict[str, str]:
     return token_data
 
 
-@app.post("/contacts/", response_model=ContactValidator)
+@app.post("/contacts/", response_model=Contact)
 def create_contact(
-    contact: ContactValidator,
+    contact: Contact,
     db: Session = Depends(get_db),  # Используйте функцию get_db
     token_data: dict = Depends(verify_token),
 ):
@@ -146,4 +143,4 @@ def create_contact(
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="127.0.0.1", port=8001, reload=True)
+    uvicorn.run(app, host="127.0.0.1", port=8000, reload=True)

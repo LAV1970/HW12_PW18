@@ -11,7 +11,7 @@ from schemas.schemas import ContactCreate, MainContactSchema
 app = FastAPI()
 
 
-class ContactValidator(BaseModel):
+class Contact(BaseModel):
     id: int
     name: str
     phone: str

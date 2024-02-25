@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from datetime import datetime
 
 
-class ContactValidator(BaseModel):
+class Contact(BaseModel):
     id: int
     name: str
     phone: str
