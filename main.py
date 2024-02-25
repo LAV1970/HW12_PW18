@@ -86,13 +86,19 @@ class User(Base):
     password = Column(String)
 
 
-@app.post("/token")
-def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+@app.post("/token", response_model=dict)  # Изменение response_model на dict
+def create_user(form_data: OAuth2PasswordRequestForm = Depends()):
     db_user = verify_user(db, form_data.username, form_data.password)
     if db_user:
         access_token_data = {"sub": db_user.username}
         access_token = create_jwt_token(access_token_data)
-        return {"access_token": access_token, "token_type": "bearer"}
+        # Изменения в возвращаемых данных
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user_id": db_user.id,  # Добавление идентификатора пользователя
+            "username": db_user.username,
+        }
     raise HTTPException(status_code=401, detail="Incorrect username or password")
 
 
