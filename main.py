@@ -1,8 +1,6 @@
 from ast import Dict
 from http import HTTPStatus
-import statistics
-from typing import List, Dict
-from django import apps
+from decouple import config  # добавим библиотеку для работы с переменными окружения
 from fastapi import FastAPI, Depends, HTTPException, applications
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError
@@ -17,17 +15,29 @@ import db
 from db import SessionLocal
 from models.contact import Contact
 from datetime import datetime
-from fastapi import FastAPI
 
 app = FastAPI()
 
 DATABASE_URL = "postgresql://lomakin:QwertY_12345@localhost/test12"
 
+SECRET_KEY = config(
+    "SECRET_KEY", default="your-secret-key"
+)  # используем переменную окружения
+
+
+# Dependency to get the database session
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
 Base = declarative_base()
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-SECRET_KEY = "your-secret-key"
 ALGORITHM = "HS256"
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
@@ -71,11 +81,13 @@ def get_user(db: Session, username: str):
     return db.query(User).filter(User.username == username).first()
 
 
-def verify_user(db: Session, username: str, password: str):
-    user = get_user(db, username)
-    if not user or not verify_password(password, user.password):
-        return None
-    return user
+def verify_user(db, username: str, password: str):
+    user = db.query(User).filter(User.username == username).first()
+    if user and verify_password(password, user.hashed_password):
+        access_token_data = {"sub": user.username}
+        access_token = create_jwt_token(access_token_data)
+        return {"access_token": access_token}
+    return None
 
 
 class User(Base):
@@ -83,23 +95,29 @@ class User(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True)
-    password = Column(String)
+    hashed_password = Column(String)
 
 
-@app.post("/token", response_model=dict)  # Изменение response_model на dict
-def create_user(form_data: OAuth2PasswordRequestForm = Depends()):
-    db_user = verify_user(db, form_data.username, form_data.password)
-    if db_user:
-        access_token_data = {"sub": db_user.username}
-        access_token = create_jwt_token(access_token_data)
-        # Изменения в возвращаемых данных
-        return {
-            "access_token": access_token,
-            "token_type": "bearer",
-            "user_id": db_user.id,  # Добавление идентификатора пользователя
-            "username": db_user.username,
-        }
-    raise HTTPException(status_code=401, detail="Incorrect username or password")
+# Endpoint for user authentication
+@app.post("/token", response_model=dict)
+def create_user(
+    form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)
+):
+    tokens = verify_user(db, form_data.username, form_data.password)
+    if tokens:
+        return tokens
+    raise HTTPException(
+        status_code=HTTPStatus.UNAUTHORIZED, detail="Invalid credentials"
+    )
+
+
+# Function to decode and verify JWT token
+def decode_jwt_token(token: str) -> dict:
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        return payload
+    except JWTError:
+        raise HTTPException(status_code=HTTPStatus.UNAUTHORIZED, detail="Invalid token")
 
 
 # Создайте класс для хранения данных пользователя
@@ -109,7 +127,7 @@ class User(BaseModel):
 
 def verify_token(token: str = Depends(oauth2_scheme)) -> Dict[str, str]:
     credentials_exception = HTTPException(
-        status_code=statistics.HTTP_401_UNAUTHORIZED,
+        status_code=HTTPStatus.UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
@@ -144,6 +162,22 @@ def create_contact(
     db.commit()
     db.refresh(new_contact)
     return new_contact
+
+
+# Dependency to get the current user from JWT token
+def get_current_user(token: str = Depends(oauth2_scheme)):
+    credentials_exception = HTTPException(
+        status_code=HTTPStatus.UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    return decode_jwt_token(token)
+
+
+# Protected endpoint that requires authentication
+@app.get("/users/me", response_model=User)
+async def read_users_me(current_user: User = Depends(get_current_user)):
+    return current_user
 
 
 if __name__ == "__main__":
