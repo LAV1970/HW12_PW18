@@ -1,4 +1,5 @@
 from http import HTTPStatus
+import json
 from decouple import config  # добавим библиотеку для работы с переменными окружения
 from fastapi import FastAPI, Depends, HTTPException, Request, applications
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
@@ -19,8 +20,22 @@ from fastapi import FastAPI, Depends
 from fastapi_limiter.depends import RateLimiter
 from fastapi_limiter import FastAPILimiter
 from fastapi.middleware.cors import CORSMiddleware
+import aioredis
+from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
+from jose import JWTError, jwt
+from sqlalchemy.orm import Session
+from fastapi.security import OAuth2PasswordBearer
+
+from routes.routes import create_jwt_token, verify_user
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 app = FastAPI()
+
+# Настройки для Redis
+REDIS_URL = "redis://localhost:6379"
+redis = aioredis.from_url(REDIS_URL)
 
 
 def get_remote_address(request: Request) -> str:
@@ -84,6 +99,42 @@ FastAPILimiter.init(
     points=5,
     minutes=1,
 )
+
+
+async def get_current_user_from_cache(token: str = Depends(oauth2_scheme)) -> dict:
+    user = await redis.get(token)
+    if user:
+        return json.loads(user)
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Invalid credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
+# Ручка для создания токена и кеширования пользователя в Redis
+@app.post("/token", response_model=dict)
+async def create_user(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db),
+):
+    user = verify_user(db, form_data.username, form_data.password)
+    if user:
+        # Создаем JWT токен
+        access_token_data = {"sub": user["username"]}
+        access_token = create_jwt_token(access_token_data)
+
+        # Кешируем пользователя в Redis
+        await redis.set(
+            access_token, json.dumps(user), expire=3600
+        )  # Время жизни в секундах (в данном случае 1 час)
+
+        return {"access_token": access_token, "token_type": "bearer"}
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Invalid credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
 
 
 # Добавьте маршрут из routes.py
