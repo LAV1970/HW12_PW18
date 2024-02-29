@@ -1,7 +1,9 @@
 # routes.py
+from collections import UserDict
 import cloudinary
 from ast import Dict
 from fastapi import Depends, HTTPException, APIRouter, File, UploadFile
+from fastapi import APIRouter, HTTPException, Depends
 from flask import app
 from sqlalchemy.orm import Session
 import db
@@ -18,6 +20,13 @@ from http import HTTPStatus
 from decouple import config
 import smtplib
 from email.mime.text import MIMEText
+from passlib.context import CryptContext
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+
+def get_password_hash(password: str) -> str:
+    return pwd_context.hash(password)
 
 
 cloudinary.config(
@@ -250,3 +259,24 @@ async def update_avatar(
     except Exception as e:
         # Обработка ошибок при загрузке на Cloudinary
         raise HTTPException(status_code=500, detail=f"Error updating avatar: {str(e)}")
+
+
+@router.post("/reset-password")
+async def reset_password(token: str, new_password: str, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.reset_password_token == token).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="Token not found")
+
+    # Валидация токена (если необходимо)
+    # ...
+
+    # Обновление пароля и сброс токена
+    user.hashed_password = get_password_hash(new_password)
+    user.reset_password_token = None
+    db.commit()
+
+    return {"message": "Password reset successfully"}
+
+
+UserDict.reset_password_token = None
+db.commit()

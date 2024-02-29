@@ -1,7 +1,5 @@
-from http import HTTPStatus
-import json
-from decouple import config  # добавим библиотеку для работы с переменными окружения
-from fastapi import FastAPI, Depends, HTTPException, Request, applications
+from collections import UserString
+from fastapi import FastAPI, Depends, HTTPException, Request, applications, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError
 from pydantic import BaseModel
@@ -14,19 +12,15 @@ import db
 from db import SessionLocal
 from models.contact import Contact
 from datetime import datetime
-from fastapi import FastAPI
 from routes import router as routes_router
-from fastapi import FastAPI, Depends
 from fastapi_limiter.depends import RateLimiter
 from fastapi_limiter import FastAPILimiter
 from fastapi.middleware.cors import CORSMiddleware
 import aioredis
-from fastapi import Depends, FastAPI, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError, jwt
-from sqlalchemy.orm import Session
-from fastapi.security import OAuth2PasswordBearer
-
+import smtplib
+from email.mime.text import MIMEText
+import json
+import secrets
 from routes.routes import create_jwt_token, verify_user
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
@@ -79,6 +73,7 @@ class User(Base):
     hashed_password = Column(String)
     is_verified = Column(Boolean, default=False)
     avatar_url = Column(String, nullable=True)  # поле аватар
+    reset_password_token = Column(String, nullable=True)
 
 
 # Создайте класс для хранения данных пользователя
@@ -139,6 +134,45 @@ async def create_user(
 
 # Добавьте маршрут из routes.py
 app.include_router(routes_router)
+
+
+def generate_reset_token():
+    return secrets.token_urlsafe(32)  # Генерация уникального токена
+
+
+# При запросе на сброс пароля
+UserString.reset_password_token = generate_reset_token()
+db.commit()
+
+
+def send_reset_password_email(email, reset_token):
+    # Настройки почтового сервера
+    smtp_server = "smtp.yourprovider.com"
+    smtp_port = 587
+    smtp_username = "your_username"
+    smtp_password = "your_password"
+
+    # Формируем сообщение
+    subject = "Сброс пароля"
+    body = f"Для сброса пароля перейдите по ссылке: /reset-password?token={reset_token}"
+    msg = MIMEText(body)
+    msg["Subject"] = subject
+    msg["From"] = "your_email@example.com"
+    msg["To"] = email
+
+    # Подключаемся к почтовому серверу и отправляем сообщение
+    with smtplib.SMTP(smtp_server, smtp_port) as server:
+        server.starttls()
+        server.login(smtp_username, smtp_password)
+        server.sendmail("your_email@example.com", [email], msg.as_string())
+
+
+# Initialize token inside a function or class
+reset_password_token = generate_reset_token()
+
+# Send reset password email
+send_reset_password_email(User.email, reset_password_token)
+
 
 if __name__ == "__main__":
     import uvicorn
