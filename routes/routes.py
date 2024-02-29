@@ -17,6 +17,7 @@ from decouple import config
 import smtplib
 from email.mime.text import MIMEText
 
+
 router = APIRouter()
 
 SECRET_KEY = config(
@@ -158,3 +159,25 @@ def send_verification_email(email, verification_link):
     smtp_port = 587
     smtp_username = "your_username"
     smtp_password = "your_password"
+    # Формируем сообщение
+    subject = "Подтверждение регистрации"
+    body = f"Для подтверждения регистрации перейдите по ссылке: {verification_link}"
+    msg = MIMEText(body)
+    msg["Subject"] = subject
+    msg["From"] = "your_email@example.com"
+    msg["To"] = email
+
+    # Подключаемся к почтовому серверу и отправляем сообщение
+    with smtplib.SMTP(smtp_server, smtp_port) as server:
+        server.starttls()
+        server.login(smtp_username, smtp_password)
+        server.sendmail("your_email@example.com", [email], msg.as_string())
+
+
+@router.get("/verify-email/{verification_token}")
+def verify_email(verification_token: str):
+    # Здесь реализуй код для проверки токена и изменения статуса пользователя на верифицированный
+    # Если токен верен, то установи is_verified=True в базе данных
+    # В противном случае, возбуди исключение HTTPException с кодом 400
+    # (Bad Request) или другим подходящим кодом.
+    return {"message": "Email successfully verified"}
