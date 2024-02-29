@@ -18,6 +18,7 @@ from routes import router as routes_router
 from fastapi import FastAPI, Depends
 from fastapi_limiter.depends import RateLimiter
 from fastapi_limiter import FastAPILimiter
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
@@ -25,6 +26,17 @@ app = FastAPI()
 def get_remote_address(request: Request) -> str:
     return request.client.host
 
+
+# Включите CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost"
+    ],  # Уточните доверенные источники, например, ["http://localhost"]
+    allow_credentials=True,
+    allow_methods=["*"],  # Разрешите все методы (GET, POST, PUT, DELETE и т.д.)
+    allow_headers=["*"],  # Разрешите все заголовки
+)
 
 DATABASE_URL = "postgresql://lomakin:QwertY_12345@localhost/test12"
 
