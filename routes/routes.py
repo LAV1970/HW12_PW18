@@ -14,6 +14,8 @@ from sqlalchemy import Column, Integer, String
 from db import get_db, SessionLocal
 from http import HTTPStatus
 from decouple import config
+import smtplib
+from email.mime.text import MIMEText
 
 router = APIRouter()
 
@@ -148,3 +150,11 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
 @app.get("/users/me", response_model=User)
 async def read_users_me(current_user: User = Depends(get_current_user)):
     return current_user
+
+
+def send_verification_email(email, verification_link):
+    # Настройки почтового сервера
+    smtp_server = "smtp.yourprovider.com"
+    smtp_port = 587
+    smtp_username = "your_username"
+    smtp_password = "your_password"

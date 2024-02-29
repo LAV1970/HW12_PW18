@@ -5,7 +5,7 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError
 from pydantic import BaseModel
 from passlib.context import CryptContext
-from sqlalchemy import Column, Integer, String, Date
+from sqlalchemy import Boolean, Column, Integer, String, Date
 from sqlalchemy.orm import Session
 from sqlalchemy.ext.declarative import declarative_base
 from api.api import Contact, create_contact, get_db
@@ -40,7 +40,9 @@ class User(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True)
+    email = Column(String, unique=True, index=True)
     hashed_password = Column(String)
+    is_verified = Column(Boolean, default=False)  # новое поле
 
 
 # Создайте класс для хранения данных пользователя
