@@ -181,3 +181,28 @@ def verify_email(verification_token: str):
     # В противном случае, возбуди исключение HTTPException с кодом 400
     # (Bad Request) или другим подходящим кодом.
     return {"message": "Email successfully verified"}
+
+
+# Настройки почтового сервера
+smtp_server = config("SMTP_SERVER")
+smtp_port = config("SMTP_PORT", default=587, cast=int)
+smtp_username = config("SMTP_USERNAME")
+smtp_password = config("SMTP_PASSWORD")
+
+# ...
+
+
+def send_verification_email(email, verification_link):
+    # Формируем сообщение
+    subject = "Подтверждение регистрации"
+    body = f"Для подтверждения регистрации перейдите по ссылке: {verification_link}"
+    msg = MIMEText(body)
+    msg["Subject"] = subject
+    msg["From"] = "your_email@example.com"
+    msg["To"] = email
+
+    # Подключаемся к почтовому серверу и отправляем сообщение
+    with smtplib.SMTP(smtp_server, smtp_port) as server:
+        server.starttls()
+        server.login(smtp_username, smtp_password)
+        server.sendmail("your_email@example.com", [email], msg.as_string())
