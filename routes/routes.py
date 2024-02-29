@@ -1,8 +1,10 @@
 # routes.py
+import cloudinary
 from ast import Dict
-from fastapi import Depends, HTTPException, APIRouter
+from fastapi import Depends, HTTPException, APIRouter, File, UploadFile
 from flask import app
 from sqlalchemy.orm import Session
+import db
 from models.contact import Contact, User  # Импортируйте User
 from main import pwd_context  # Импортируйте pwd_context
 from jose import JWTError
@@ -18,6 +20,11 @@ import smtplib
 from email.mime.text import MIMEText
 
 
+cloudinary.config(
+    cloud_name=config("CLOUDINARY_CLOUD_NAME"),
+    api_key=config("CLOUDINARY_API_KEY"),
+    api_secret=config("CLOUDINARY_API_SECRET"),
+)
 router = APIRouter()
 
 SECRET_KEY = config(
@@ -175,12 +182,29 @@ def send_verification_email(email, verification_link):
 
 
 @router.get("/verify-email/{verification_token}")
-def verify_email(verification_token: str):
-    # Здесь реализуй код для проверки токена и изменения статуса пользователя на верифицированный
-    # Если токен верен, то установи is_verified=True в базе данных
-    # В противном случае, возбуди исключение HTTPException с кодом 400
-    # (Bad Request) или другим подходящим кодом.
-    return {"message": "Email successfully verified"}
+def verify_email(verification_token: str, db: Session = Depends(get_db)):
+    try:
+        # Декодируем токен
+        payload = decode_jwt_token(verification_token)
+        username = payload.get("sub")
+
+        # Находим пользователя в базе данных
+        user = db.query(User).filter(User.username == username).first()
+
+        # Проверяем, существует ли пользователь и не верифицирован ли он уже
+        if user and not user.is_verified:
+            # Устанавливаем статус верификации пользователя
+            user.is_verified = True
+            db.commit()
+
+            return {"message": "Email successfully verified"}
+        else:
+            # Если пользователь не найден или уже верифицирован, возвращаем ошибку
+            raise HTTPException(status_code=400, detail="Invalid verification token")
+
+    except HTTPException as e:
+        # Обрабатываем возможные исключения, например, если токен неверен
+        return {"message": f"Error verifying email: {str(e)}"}
 
 
 # Настройки почтового сервера
@@ -206,3 +230,19 @@ def send_verification_email(email, verification_link):
         server.starttls()
         server.login(smtp_username, smtp_password)
         server.sendmail("your_email@example.com", [email], msg.as_string())
+
+
+@router.post("/users/me/avatar")
+async def update_avatar(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+):
+    # Обработка загрузки файла на Cloudinary
+    result = cloudinary.uploader.upload(file.file)
+    avatar_url = result["secure_url"]
+
+    # Обновление ссылки на аватар в базе данных
+    current_user.avatar_url = avatar_url
+    db.commit()
+
+    return {"message": "Avatar updated successfully", "avatar_url": avatar_url}
