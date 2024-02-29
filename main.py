@@ -1,6 +1,6 @@
 from http import HTTPStatus
 from decouple import config  # добавим библиотеку для работы с переменными окружения
-from fastapi import FastAPI, Depends, HTTPException, applications
+from fastapi import FastAPI, Depends, HTTPException, Request, applications
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError
 from pydantic import BaseModel
@@ -15,8 +15,16 @@ from models.contact import Contact
 from datetime import datetime
 from fastapi import FastAPI
 from routes import router as routes_router
+from fastapi import FastAPI, Depends
+from fastapi_limiter.depends import RateLimiter
+from fastapi_limiter import FastAPILimiter
 
 app = FastAPI()
+
+
+def get_remote_address(request: Request) -> str:
+    return request.client.host
+
 
 DATABASE_URL = "postgresql://lomakin:QwertY_12345@localhost/test12"
 
@@ -48,6 +56,21 @@ class User(Base):
 # Создайте класс для хранения данных пользователя
 class User(BaseModel):
     username: str
+
+
+# Создайте RateLimiter
+limiter = RateLimiter(key_func=get_remote_address)
+
+# Добавьте RateLimiter в приложение
+FastAPILimiter.init(
+    app=app,
+    key_func=get_remote_address,
+    storage_uri="memory://",
+    # Здесь установите желаемые ограничения для создания контактов
+    # Например, 5 запросов в секунду
+    points=5,
+    minutes=1,
+)
 
 
 # Добавьте маршрут из routes.py
