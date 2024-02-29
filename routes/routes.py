@@ -213,8 +213,6 @@ smtp_port = config("SMTP_PORT", default=587, cast=int)
 smtp_username = config("SMTP_USERNAME")
 smtp_password = config("SMTP_PASSWORD")
 
-# ...
-
 
 def send_verification_email(email, verification_link):
     # Формируем сообщение
@@ -236,13 +234,19 @@ def send_verification_email(email, verification_link):
 async def update_avatar(
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
-    # Обработка загрузки файла на Cloudinary
-    result = cloudinary.uploader.upload(file.file)
-    avatar_url = result["secure_url"]
+    try:
+        # Обработка загрузки файла на Cloudinary
+        result = cloudinary.uploader.upload(file.file)
+        avatar_url = result["secure_url"]
 
-    # Обновление ссылки на аватар в базе данных
-    current_user.avatar_url = avatar_url
-    db.commit()
+        # Обновление ссылки на аватар в базе данных
+        current_user = db.merge(current_user)
+        current_user.avatar_url = avatar_url
+        db.commit()
 
-    return {"message": "Avatar updated successfully", "avatar_url": avatar_url}
+        return {"message": "Avatar updated successfully", "avatar_url": avatar_url}
+    except Exception as e:
+        # Обработка ошибок при загрузке на Cloudinary
+        raise HTTPException(status_code=500, detail=f"Error updating avatar: {str(e)}")
