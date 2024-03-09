@@ -27,6 +27,12 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 app = FastAPI()
 
+
+@app.get("/")
+def read_root():
+    return {"message": "Hello, World!"}
+
+
 # Настройки для Redis
 REDIS_URL = "redis://localhost:6379"
 redis = aioredis.from_url(REDIS_URL)
