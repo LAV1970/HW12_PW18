@@ -1,0 +1,41 @@
+HW12\_PW18 package
+==================
+
+Subpackages
+-----------
+
+.. toctree::
+   :maxdepth: 4
+
+   HW12_PW18.api
+   HW12_PW18.crud
+   HW12_PW18.db
+   HW12_PW18.models
+   HW12_PW18.schemas
+
+Submodules
+----------
+
+HW12\_PW18.database module
+--------------------------
+
+.. automodule:: HW12_PW18.database
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+HW12\_PW18.main module
+----------------------
+
+.. automodule:: HW12_PW18.main
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Module contents
+---------------
+
+.. automodule:: HW12_PW18
+   :members:
+   :undoc-members:
+   :show-inheritance:

@@ -1,0 +1,21 @@
+HW12\_PW18.models package
+=========================
+
+Submodules
+----------
+
+HW12\_PW18.models.contact module
+--------------------------------
+
+.. automodule:: HW12_PW18.models.contact
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Module contents
+---------------
+
+.. automodule:: HW12_PW18.models
+   :members:
+   :undoc-members:
+   :show-inheritance:

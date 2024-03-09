@@ -1,0 +1,21 @@
+HW12\_PW18.crud package
+=======================
+
+Submodules
+----------
+
+HW12\_PW18.crud.crud module
+---------------------------
+
+.. automodule:: HW12_PW18.crud.crud
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Module contents
+---------------
+
+.. automodule:: HW12_PW18.crud
+   :members:
+   :undoc-members:
+   :show-inheritance:
