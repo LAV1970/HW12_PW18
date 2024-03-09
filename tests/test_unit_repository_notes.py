@@ -3,9 +3,9 @@ from unittest.mock import MagicMock
 
 from sqlalchemy.orm import Session
 
-from src.database.models import Note, Tag, User
-from src.schemas import NoteModel, NoteUpdate, NoteStatusUpdate
-from src.repository.notes import (
+from models import Note, Tag, User  # Update this line
+from schemas import NoteModel, NoteUpdate, NoteStatusUpdate  # Update this line
+from main import (
     get_notes,
     get_note,
     create_note,
@@ -61,8 +61,8 @@ class TestNotes(unittest.IsolatedAsyncioTestCase):
 
     async def test_update_note_found(self):
         body = NoteUpdate(title="test", description="test note", tags=[1, 2], done=True)
-        self._mock_tags_query()
-        note = Note(tags=self._mock_tags())
+        self.mock_tags_query()
+        note = Note(tags=self.mock_tags())
         self.session.query().filter().first.return_value = note
         self.session.query().filter().all.return_value = note.tags
         self.session.commit.return_value = None
