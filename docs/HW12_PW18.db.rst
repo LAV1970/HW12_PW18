@@ -1,0 +1,10 @@
+HW12\_PW18.db package
+=====================
+
+Module contents
+---------------
+
+.. automodule:: HW12_PW18.db
+   :members:
+   :undoc-members:
+   :show-inheritance:
