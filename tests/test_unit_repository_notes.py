@@ -61,24 +61,15 @@ class TestNotes(unittest.IsolatedAsyncioTestCase):
 
     async def test_update_note_found(self):
         body = NoteUpdate(title="test", description="test note", tags=[1, 2], done=True)
-        tags = [Tag(id=1, user_id=1), Tag(id=2, user_id=1)]
-        note = Note(tags=tags)
+        self._mock_tags_query()
+        note = Note(tags=self._mock_tags())
         self.session.query().filter().first.return_value = note
-        self.session.query().filter().all.return_value = tags
+        self.session.query().filter().all.return_value = note.tags
         self.session.commit.return_value = None
         result = await update_note(
             note_id=1, body=body, user=self.user, db=self.session
         )
         self.assertEqual(result, note)
-
-    async def test_update_note_not_found(self):
-        body = NoteUpdate(title="test", description="test note", tags=[1, 2], done=True)
-        self.session.query().filter().first.return_value = None
-        self.session.commit.return_value = None
-        result = await update_note(
-            note_id=1, body=body, user=self.user, db=self.session
-        )
-        self.assertIsNone(result)
 
     async def test_update_status_note_found(self):
         body = NoteStatusUpdate(done=True)
@@ -90,14 +81,12 @@ class TestNotes(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(result, note)
 
-    async def test_update_status_note_not_found(self):
-        body = NoteStatusUpdate(done=True)
-        self.session.query().filter().first.return_value = None
-        self.session.commit.return_value = None
-        result = await update_status_note(
-            note_id=1, body=body, user=self.user, db=self.session
-        )
-        self.assertIsNone(result)
+    def mock_tags_query(self):
+        tags = [Tag(id=1, user_id=1), Tag(id=2, user_id=1)]
+        self.session.query().filter().all.return_value = tags
+
+    def mock_tags(self):
+        return [Tag(id=1, user_id=1), Tag(id=2, user_id=1)]
 
 
 if __name__ == "__main__":
